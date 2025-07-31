@@ -33,7 +33,9 @@ export default function Menu() {
   // } = useMenuItems();
 
   const [menuData, setMenuData] = useState([]);
+  const [backupMenuData, setBackupMenuData] = useState([]);
   const [categories, setCategoryData] = useState([]);
+  const [backupCategories, setBackupCategoryData] = useState([]);
   const [displayMenu, toggleMenu] = useState(false);
   const [displaySort, toggleSortDropdown] = useState(false);
   const [isCategoryDisplayed, toggleCategory] = useState(true);
@@ -45,18 +47,18 @@ export default function Menu() {
 
   const fetchCategories = async () => {
     const res = await categoryService.getCategories();
-    console.log("res.data ", res.data)
     if (res.data) {
       setCategoryData(res.data.data);
+      setBackupCategoryData(res.data.data);
       fetchMenus();
     }
   }
 
   const fetchMenus = async () => {
     const res = await menuService.getMenus();
-    console.log("res.data--- ", res.data)
 
     if (res.data) {
+      setBackupMenuData(res.data);
       setMenuData(res.data);
     }
   }
@@ -116,19 +118,41 @@ export default function Menu() {
     }
 
     let filteredItems = [];
+    let menuArr = [];
+
+    let localCategories = JSON.parse(JSON.stringify(backupCategories));
 
     if (selectedFilters.length) {
-      filteredItems = menuData.map(item => {
-        if ((selectedFilters.includes('Veg') && item.isVeg) ||
-          (selectedFilters.includes('Non-Veg') && item.isNonVeg) ||
-          (selectedFilters.includes('Spicy') && item.isSpicy)) {
-          return item; // Exclude non-veg items
+      backupMenuData.forEach(item => {
+        if (item.menus?.length) {
+          menuArr = [];
+          item.menus.forEach(eachItem => {
+            if ((selectedFilters.includes('Veg') && eachItem.veg) ||
+              (selectedFilters.includes('Non-Veg') && !eachItem.veg) ||
+              (selectedFilters.includes('Spicy') && eachItem.spicy)) {
+                menuArr.push(eachItem);
+            }
+          })
+          filteredItems.push({
+            categoryId: item.categoryId,
+            menus: menuArr
+          });
+          if (!menuArr.length) {
+            localCategories.forEach(each => {
+              if (each._id === item.categoryId) {
+                each.totalMenu = 0;
+              }
+            });
+          }
         }
-      }).filter(each => each !== undefined);
+      });
     } else {
-      filteredItems = menuData; // If no filters are selected, show all items
+      filteredItems = JSON.parse(JSON.stringify(backupMenuData));
+      localCategories = JSON.parse(JSON.stringify(backupCategories));
     }
+
     setMenuData(filteredItems);
+    setCategoryData(localCategories);
   };
 
   const sortMenuItems = (index) => {
@@ -136,12 +160,20 @@ export default function Menu() {
 
     if (!sortOptions[index].selected) {
       toggleCategory(false);
+      const localMenuData = [];
+      backupMenuData.forEach(each1 => {
+        if (each1.menus?.length) {
+          each1.menus.forEach(each2 => {
+            localMenuData.push(JSON.parse(JSON.stringify(each2)));
+          })
+        }
+      });
       switch (index) {
         case 0:
-          setMenuData([...menuData].sort((a, b) => a.basePrice - b.basePrice));
+          setMenuData([...localMenuData].sort((a, b) => a.price - b.price));
           break;
         case 1:
-          setMenuData([...menuData].sort((a, b) => b.basePrice - a.basePrice));
+          setMenuData([...localMenuData].sort((a, b) => b.price - a.price));
           break;
         // default:
         //   setMenuData([...menuData].sort((a, b) => b.basePrice - a.basePrice));
@@ -149,6 +181,7 @@ export default function Menu() {
       }
     } else {
       toggleCategory(true);
+      setMenuData(JSON.parse(JSON.stringify(backupMenuData)));
     }
     localSortOptions.forEach((each, ind) => {
       if (index !== ind) {
@@ -181,8 +214,8 @@ export default function Menu() {
               width: "96%"
             }}>
               <div className="py-2 text-xs text-gray-300 font-semibold mb-2">Menu</div>
-              {categories?.data?.map((c) => (
-                <button
+              {categories?.map((c) => (
+                c.totalMenu ? <button
                   key={c._id}
                   className={`px-4 py-2 rounded-full bg-[#2f2e33] text-xs w-max text-white mr-2 mb-2`}
                   onClick={() => {
@@ -198,7 +231,7 @@ export default function Menu() {
                   }}
                 >
                   {c.name}
-                </button>
+                </button> : null
               ))}
               <div className="border-t border-gray-700 my-2 mt-4" />
               <div className="py-2 text-xs text-gray-300 font-semibold mb-2">Filter by</div>
@@ -302,7 +335,7 @@ export default function Menu() {
       <div id="scrollContainer" className={`scrollbar-hide relative bg-${!userData?.dark ? "[#0d0d0d]" : "white"} h-screen overflow-y-auto`}>
         {isCategoryDisplayed && menuData.length && categories?.length > 0 ?
           categories.map((c) => (
-            <section className="mt-4" id={c._id} key={c._id}>
+            c.totalMenu ? <section className="mt-4" id={c._id} key={c._id}>
               <div className="px-4">
                 <SectionHeaders mainHeader={c.name} isDark={!userData?.dark} />
               </div>
@@ -314,7 +347,7 @@ export default function Menu() {
                     return eachMenu.menus.map((product,index) => {
                       return <MenuListItem
                         key={index}
-                        product={product}
+                        product={{...product,image: product?.images?.length ? product.images[0] : ""}}
                         hideAddToCart={false}
                       />
                     })
@@ -325,19 +358,24 @@ export default function Menu() {
                   ?.filter((item) => item?.categoryId === c._id)
                   .map((eachMenu) => {
                     return eachMenu.menus.map((product) => {
-                      return <MenuItem key={product._id} {...product} />
+                      return <MenuItem key={product._id} {...product} image={product?.images?.length ? product.images[0] : ""} />
                     })
                   })}
               </div> }
-            </section>
+            </section> : null
           )) : null}
         {!isCategoryDisplayed && menuData.length ?
           <section className="mt-2">
-            <div className="grid grid-cols-2 gap-4 my-2 px-4" onClick={() => router.push('/details')}>
+            <div className={`${isCardView ? 'grid grid-cols-2 gap-4' : ''} my-2 px-4`} onClick={() => router.push('/details')}>
               {menuData
-                .map((item) => (
-                  <MenuItem key={item._id} {...item} />
-                ))}
+                .map((product, index) => {
+                    return isCardView ? <MenuItem key={product._id} {...product} image={product?.images?.length ? product.images[0] : ""} /> :
+                    <MenuListItem
+                        key={index}
+                        product={{...product,image: product?.images?.length ? product.images[0] : ""}}
+                        hideAddToCart={false}
+                      />
+                  })}
             </div>
           </section>
           : null}

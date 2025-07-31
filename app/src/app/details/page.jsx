@@ -11,24 +11,26 @@ import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/backButton';
 import { useUserStore } from '@/store/UserStore';
 import CarouselModal from '@/components/ui/CarouselModal';
+import { menuService } from '@/services/menu.service';
+import { defaultImage } from '@/config/config';
 
-const menuItem = {
-  _id: "1",
-  name: 'Veg Spring Rolls',
-  description: 'Crispy and delicious vegetable spring rolls served with a tangy dipping sauce.',
-  ingredients: '2 cups mixed vegetables (carrot, cabbage, bell pepper)\n1 tsp soy sauce\n1 tsp ginger-garlic paste\n1/2 tsp black pepper\nSpring roll wrappers\nOil for frying',
-  basePrice: 120,
-  images: [
-    'https://i.pinimg.com/736x/74/55/86/7455861056a201b44b68a5ef65e36583.jpg',
-    'https://i.pinimg.com/736x/f4/33/e4/f433e4ea38e6288b41170db2c9d2055e.jpg',
+// const menuItem = {
+//   _id: "1",
+//   name: 'Veg Spring Rolls',
+//   description: 'Crispy and delicious vegetable spring rolls served with a tangy dipping sauce.',
+//   ingredients: '2 cups mixed vegetables (carrot, cabbage, bell pepper)\n1 tsp soy sauce\n1 tsp ginger-garlic paste\n1/2 tsp black pepper\nSpring roll wrappers\nOil for frying',
+//   basePrice: 120,
+//   images: [
+//     'https://i.pinimg.com/736x/74/55/86/7455861056a201b44b68a5ef65e36583.jpg',
+//     'https://i.pinimg.com/736x/f4/33/e4/f433e4ea38e6288b41170db2c9d2055e.jpg',
     
-  ],
-  likedBy: 5
-};
+//   ],
+//   likedBy: 5
+// };
 
 export default function MenuDetailsPage() {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [menuData, setMenuData] = useState(menuItem);
+  const [menuData, setMenuData] = useState();
+  const [menuItem, setMenuItem] = useState();
   const [menuCount, updateMenuCount] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
@@ -40,17 +42,36 @@ export default function MenuDetailsPage() {
     selected: true,
     color: 'bg-[#000000]',
     selectedColor: 'bg-primary'
-  }, {
-    label: 'Ingredients',
-    selected: false,
-    color: 'bg-[#000000]',
-    selectedColor: 'bg-primary'
   }]);
 
   const addToCart = useCartProductsStore((state) => state.addToCart);
   const userData = useUserStore((state) => state.user);
 
   const cartData = useCartProductsStore((state) => state.cartProducts);
+
+  const fetchMenuDetails = async () => {
+    const res = await menuService.getMenuItem();
+
+    if (res.data && Object.keys(res.data).length) {
+      setMenuData(res.data);
+      setMenuItem(res.data);
+      if (res.data.ingredients.length) {
+        setFilters([
+          ...filters,
+          {
+            label: 'Ingredients',
+            selected: false,
+            color: 'bg-[#000000]',
+            selectedColor: 'bg-primary'
+          }
+        ]);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchMenuDetails();
+  }, []);
 
   const openModal = (index) => {
     setStartIndex(index);
@@ -69,13 +90,6 @@ export default function MenuDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartData]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % menuItem.images.length);
-    }, 3000); // Auto swipe every 3 seconds
-    return () => clearInterval(interval);
-  }, []);
-
   const updateFilter = (index) => {
     const localFilters = [...filters];
     localFilters.forEach((each, ind) => {
@@ -89,7 +103,14 @@ export default function MenuDetailsPage() {
   };
 
   const convertToHtml = (text) => {
-    return text.replaceAll('\n', '<br />');
+    if (!text.length) {
+      return "";
+    }
+    let htmlContent = "";
+    text.map(each => {
+      htmlContent += `<div>${each}</div>`
+    });
+    return htmlContent;
   };
 
   const manageCart = (item, count) => {
@@ -104,10 +125,10 @@ export default function MenuDetailsPage() {
 
 
   return (
-    <>
+    menuItem ? <>
       {modalOpen && (
         <CarouselModal
-          images={menuItem.images}
+          images={menuItem.images?.length ? menuItem.images : [defaultImage]}
           startIndex={startIndex}
           onClose={() => setModalOpen(false)}
         />
@@ -132,7 +153,7 @@ export default function MenuDetailsPage() {
       </button> */}
       </div>
       <Card className={`rounded-2xl shadow-lg overflow-hidden ${!userData?.dark ? 'bg-[#2f2e33] text-white' : 'bg-white text-black'} h-screen relative`}>
-        <Carousel className="w-full h-80" items={menuItem.images} openModal={openModal} />
+        <Carousel className="w-full h-80" items={menuItem.images?.length ? menuItem.images : [defaultImage]} openModal={openModal} />
         <AddToCart
             menuItem={menuItem}
             handleAddToCard={manageCart}
@@ -148,15 +169,16 @@ export default function MenuDetailsPage() {
             margin: "15px 0 25px"
           }}>
             <div>
-              <span className={`text-xs rounded-full px-4 py-2 border ${!userData?.dark ? 'border-white' : 'border-black'} mr-2`}>Total Order: 50</span>
-              <span className={`text-xs rounded-full px-4 py-2 border ${!userData?.dark ? 'border-white' : 'border-black'}`}>Veg</span>
+              {/* <span className={`text-xs rounded-full px-4 py-2 border ${!userData?.dark ? 'border-white' : 'border-black'} mr-2`}>Total Order: 50</span> */}
+              <span className={`text-xs rounded-full px-4 py-2 mr-2 border ${!userData?.dark ? 'border-white' : 'border-black'}`}>{menuItem.isVeg ? "Veg" : "Non veg"}</span>
+              {menuItem.isSpicy ? <span className={`text-xs rounded-full px-4 py-2 border ${!userData?.dark ? 'border-white' : 'border-black'}`}>Spicy</span>: null}
             </div>
-            <div className="flex items-center space-x-1">
+            {/* <div className="flex items-center space-x-1">
               <svg xmlns="http://www.w3.org/2000/svg" fill="#FFD700" viewBox="0 0 20 20" className="w-5 h-5">
                 <path d="M10 15.27L16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z" />
               </svg>
               <span className="text-yellow-400 font-semibold text-md">4.5</span>
-            </div>
+            </div> */}
           </div>
 
 
@@ -182,7 +204,7 @@ export default function MenuDetailsPage() {
           zIndex: 99
         }}>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold">₹{menuItem.basePrice}</span>
+            <span className="text-lg font-bold">₹{menuItem.price}</span>
             {menuCount ? <button className="rounded-xl px-6 py-3 bg-primary text-white" onClick={() => {
               if (menuData.inCartCount !== menuCount) {
                 addToCart(menuItem, menuCount);
@@ -190,13 +212,13 @@ export default function MenuDetailsPage() {
               router.push('/menu');
             }
             }>
-              Add Item {menuCount ? `| ₹${menuItem.basePrice * menuCount}` : ""}
+              Add Item {menuCount ? `| ₹${menuItem.price * menuCount}` : ""}
             </button> : null}
           </div>
         </div>
       </Card>
 
     </div>
-    </>
+    </> : null
   );
 }

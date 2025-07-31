@@ -1,0 +1,1 @@
+export const defaultImage = "https://www.bookmychefs.com/uploads/dish/default_food.jpg";

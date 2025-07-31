@@ -1,8 +1,8 @@
 import React from "react";
 import Image from "next/image";
 import {AddToCart} from "@/components/ui/addToCart";
+import {defaultImage} from "@/config/config";
 
-const defaultImage = "https://www.bookmychefs.com/uploads/dish/default_food.jpg";
 // import FlyingButton from "react-flying-item";
 export default function MenuItemBox({ menuItem, handleAddToCard }) {
   const { name, description, image, price, inCartCount } = menuItem;
