@@ -1,0 +1,67 @@
+@tailwind base;
+
+/* Firefox */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: var(--secondary) var(--primary);
+}
+
+/* Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+  width: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--primary);
+  border-radius: 5px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #47465c;
+  border-radius: 14px;
+  border: 1px var(--primary);
+  -webkit-border-radius: 14px;
+  -moz-border-radius: 14px;
+  -ms-border-radius: 14px;
+  -o-border-radius: 14px;
+}
+
+body {
+  /* overflow: hidden; */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+nav {
+  /* background-color: #0d0d0d !important; */
+  height: 2rem !important;
+}
+
+nav header {
+  padding: 0 10px !important;
+  height: auto !important;
+}
+
+.menu-details .details {
+    z-index: 99;
+    position: absolute;
+    top: 19rem;
+    left: 0;
+    height: calc(100% - 19rem);
+    width: 100%;
+}
+
+@tailwind components;
+@tailwind utilities;
+
+/* section.hero {
+  @apply grid;
+  grid-template-columns: 0.4fr 0.6fr;
+} */
